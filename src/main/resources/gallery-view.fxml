@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="ie.setu.gallery.ui.GalleryController">
+
+    <top>
+        <VBox spacing="10" style="-fx-padding: 10;">
+            <HBox spacing="8">
+                <Label text="Preferred Artists:" />
+                <TextField fx:id="artistField" promptText="Comma-separated artist names" />
+
+                <Button text="Find Interesting Route" onAction="#handleFindInterestingRoute" />
+            </HBox>
+
+            <HBox spacing="8">
+                <Label text="Start:" />
+                <TextField fx:id="startField" promptText="Room or exhibit id" />
+
+                <Label text="End:" />
+                <TextField fx:id="endField" promptText="Room or exhibit id" />
+            </HBox>
+
+            <HBox spacing="8">
+                <Label text="Avoid:" />
+                <TextField fx:id="avoidField" promptText="Comma-separated room ids" />
+
+                <Label text="Waypoints:" />
+                <TextField fx:id="waypointField" promptText="Comma-separated room ids" />
+            </HBox>
+
+            <HBox spacing="8">
+                <Button text="Find Shortest Route" onAction="#handleFindShortestRoute" />
+                <Button text="Find DFS Routes" onAction="#handleFindDfsRoutes" />
+            </HBox>
+        </VBox>
+    </top>
+
+    <center>
+        <Pane fx:id="mapPane"
+              prefWidth="800"
+              prefHeight="500"
+              style="-fx-background-color: white; -fx-border-color: black;" />
+    </center>
+
+    <bottom>
+        <TextArea fx:id="outputArea"
+                  prefRowCount="8"
+                  wrapText="true"
+                  editable="false" />
+    </bottom>
+
+</BorderPane>
