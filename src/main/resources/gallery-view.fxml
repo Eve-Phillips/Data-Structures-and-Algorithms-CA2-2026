@@ -41,6 +41,7 @@
             <HBox spacing="8">
                 <Button text="Find Shortest Route" onAction="#handleFindShortestRoute" />
                 <Button text="Find DFS Routes" onAction="#handleFindDfsRoutes" />
+                <Button text="Find BFS Map Route" onAction="#handleFindBfsMapRoute" />
             </HBox>
         </VBox>
     </top>
