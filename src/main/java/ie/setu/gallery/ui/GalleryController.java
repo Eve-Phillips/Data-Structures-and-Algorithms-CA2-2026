@@ -2,29 +2,31 @@ package ie.setu.gallery.ui;
 
 import ie.setu.gallery.graph.GalleryGraph;
 import ie.setu.gallery.graph.GraphLoader;
+import ie.setu.gallery.model.GridPoint;
 import ie.setu.gallery.model.Room;
 import ie.setu.gallery.model.Route;
-import ie.setu.gallery.model.GridPoint;
-import ie.setu.gallery.service.RouteFinder;
 import ie.setu.gallery.service.BfsMapRouteFinder;
+import ie.setu.gallery.service.InterestingRouteFinder;
+import ie.setu.gallery.service.RouteFinder;
+import ie.setu.gallery.service.WalkableMapLoader;
 import javafx.fxml.FXML;
-import javafx.scene.text.Text;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Polyline;
-import javafx.scene.shape.Rectangle;
+import javafx.scene.text.Text;
 
 import java.io.IOException;
+import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import ie.setu.gallery.service.InterestingRouteFinder;
 
 public class GalleryController {
 
@@ -34,15 +36,22 @@ public class GalleryController {
     @FXML private TextField waypointField;
     @FXML private TextField artistField;
     @FXML private TextArea outputArea;
-    @FXML private Pane mapPane;
 
+    // The ImageView shows the actual gallery map.
+    @FXML private ImageView mapImageView;
+
+    // The pane sits over the map and is used for markers/routes.
+    @FXML private Pane mapPane;
 
     private GalleryGraph graph;
     private RouteFinder routeFinder;
     private InterestingRouteFinder interestingRouteFinder;
     private BfsMapRouteFinder bfsMapRouteFinder;
 
-    private static final int BFS_CELL_SIZE = 5;
+    private Image mapImage;
+    private Image walkableImage;
+    private boolean[][] walkableGrid;
+
     private static final int MAP_WIDTH = 800;
     private static final int MAP_HEIGHT = 500;
 
@@ -50,15 +59,60 @@ public class GalleryController {
     public void initialize() {
         try {
             graph = GraphLoader.loadFromCsv("data/rooms.csv", "data/edges.csv", "data/exhibits.csv");
+
             routeFinder = new RouteFinder(graph);
             interestingRouteFinder = new InterestingRouteFinder(graph);
             bfsMapRouteFinder = new BfsMapRouteFinder();
 
-            drawTemporaryBfsObstacles();
+            loadMapImages();
             drawRoomMarkers();
+            setUpMapCoordinateClick();
+
         } catch (IOException e) {
             outputArea.setText("Failed to load graph data: " + e.getMessage());
+        } catch (Exception e) {
+            outputArea.setText("Failed to initialise map: " + e.getMessage());
         }
+    }
+
+    private void loadMapImages() {
+        URL mapUrl = getClass().getResource("/ie/setu/gallery/gallery-map.png");
+        URL walkableUrl = getClass().getResource("/ie/setu/gallery/gallery-walkable.png");
+
+        if (mapUrl == null) {
+            throw new IllegalStateException("Could not find gallery-map.png in resources.");
+        }
+
+        if (walkableUrl == null) {
+            throw new IllegalStateException("Could not find gallery-walkable.png in resources.");
+        }
+
+        mapImage = new Image(mapUrl.toExternalForm());
+        walkableImage = new Image(walkableUrl.toExternalForm());
+
+        mapImageView.setImage(mapImage);
+        mapImageView.setFitWidth(MAP_WIDTH);
+        mapImageView.setFitHeight(MAP_HEIGHT);
+        mapImageView.setPreserveRatio(false);
+
+        WalkableMapLoader loader = new WalkableMapLoader();
+        walkableGrid = loader.loadWalkableGrid(walkableImage);
+    }
+
+    // Temporary helper for calibrating room coordinates in rooms.csv.
+    // Click the map, then copy the printed x/y values into the CSV.
+    private void setUpMapCoordinateClick() {
+        mapPane.setOnMouseClicked(event -> {
+            long x = Math.round(event.getX());
+            long y = Math.round(event.getY());
+
+            outputArea.setText(
+                    "Clicked map coordinate:\n" +
+                            "x = " + x + "\n" +
+                            "y = " + y + "\n\n" +
+                            "Use these values in rooms.csv as mapX,mapY."
+            );
+        });
     }
 
     @FXML
@@ -71,6 +125,7 @@ public class GalleryController {
         List<String> waypoints = parseCsvList(waypointField.getText());
 
         Route route;
+
         if (waypoints.isEmpty()) {
             route = routeFinder.findShortestRouteDijkstra(start, end, avoid);
         } else {
@@ -107,7 +162,7 @@ public class GalleryController {
                         .collect(Collectors.joining("\n"))
         );
 
-        // For now just draw the first route found
+        // Just draws the first DFS route for now.
         drawRoute(routes.get(0));
     }
 
@@ -143,6 +198,11 @@ public class GalleryController {
     public void handleFindBfsMapRoute() {
         clearRouteLines();
 
+        if (walkableGrid == null) {
+            outputArea.setText("Walkable map has not loaded.");
+            return;
+        }
+
         String startId = startField.getText().trim();
         String endId = endField.getText().trim();
 
@@ -154,31 +214,36 @@ public class GalleryController {
             return;
         }
 
-        boolean[][] walkable = createTemporaryWalkableGrid();
-
         GridPoint start = toGridPoint(startRoom);
         GridPoint end = toGridPoint(endRoom);
 
-        var path = bfsMapRouteFinder.findPath(walkable, start, end);
+        // If the marker lands on a black wall/line, try to nudge it to nearby white pixels.
+        start = findNearestWalkablePoint(start, 10);
+        end = findNearestWalkablePoint(end, 10);
+
+        if (start == null || end == null) {
+            outputArea.setText("Start or end point is not on a walkable part of the map.");
+            return;
+        }
+
+        List<GridPoint> path = bfsMapRouteFinder.findPath(walkableGrid, start, end);
 
         if (path.isEmpty()) {
-            outputArea.setText("No BFS map route found.");
+            outputArea.setText("No BFS map route found. The walkable map may have blocked gaps.");
             return;
         }
 
         drawBfsPath(path);
 
         outputArea.setText(
-                "BFS Map Route (temporary demo)\n" +
+                "BFS Map Route\n" +
                         "Start: " + startRoom.getId() + "\n" +
                         "End: " + endRoom.getId() + "\n" +
-                        "Steps: " + (path.size() - 1) + "\n\n" +
-                        "Note: this currently uses a temporary hardcoded grid.\n" +
-                        "We will replace the real image-based map later."
+                        "Pixel steps: " + (path.size() - 1) + "\n\n" +
+                        "This route uses the black/white walkable map."
         );
     }
 
-    // Parses comma-separated input into a Set
     private Set<String> parseCsvSet(String input) {
         if (input == null || input.isBlank()) return Set.of();
 
@@ -188,7 +253,6 @@ public class GalleryController {
                 .collect(Collectors.toSet());
     }
 
-    // Parses comma-separated input into a List
     private List<String> parseCsvList(String input) {
         if (input == null || input.isBlank()) return List.of();
 
@@ -198,8 +262,9 @@ public class GalleryController {
                 .toList();
     }
 
-    // Draws a simple marker for each room on the map pane
     private void drawRoomMarkers() {
+        mapPane.getChildren().removeIf(node -> "marker".equals(node.getUserData()));
+
         for (Room room : graph.getAllRooms()) {
             Circle circle = new Circle(room.getMapX(), room.getMapY(), 6, Color.DARKBLUE);
             circle.setUserData("marker");
@@ -213,7 +278,6 @@ public class GalleryController {
         }
     }
 
-    // Draws straight lines between rooms in the chosen route
     private void drawRoute(Route route) {
         List<Room> rooms = route.getRooms();
 
@@ -225,73 +289,68 @@ public class GalleryController {
             line.setStroke(Color.RED);
             line.setStrokeWidth(3);
             line.setUserData("routeLine");
+
             mapPane.getChildren().add(line);
         }
     }
 
-    // Removes old route lines before drawing a new route
     private void clearRouteLines() {
         mapPane.getChildren().removeIf(node -> "routeLine".equals(node.getUserData()));
     }
 
-    private boolean[][] createTemporaryWalkableGrid() {
-        int cols = MAP_WIDTH / BFS_CELL_SIZE;
-        int rows = MAP_HEIGHT / BFS_CELL_SIZE;
+    private GridPoint toGridPoint(Room room) {
+        int imageWidth = (int) walkableImage.getWidth();
+        int imageHeight = (int) walkableImage.getHeight();
 
-        boolean[][] walkable = new boolean[rows][cols];
+        double scaleX = imageWidth / (double) MAP_WIDTH;
+        double scaleY = imageHeight / (double) MAP_HEIGHT;
 
-        for (int y = 0; y < rows; y++) {
-            Arrays.fill(walkable[y], true);
-        }
+        int gridX = (int) Math.round(room.getMapX() * scaleX);
+        int gridY = (int) Math.round(room.getMapY() * scaleY);
 
-        // Temporary walls for demo purposes
-        blockRectangle(walkable, 300, 120, 20, 220);
-        blockRectangle(walkable, 390, 80, 20, 140);
-
-        return walkable;
+        return new GridPoint(gridX, gridY);
     }
 
-    private void blockRectangle(boolean[][] walkable, int pixelX, int pixelY, int pixelWidth, int pixelHeight) {
-        int startCol = pixelX / BFS_CELL_SIZE;
-        int endCol = (pixelX + pixelWidth) / BFS_CELL_SIZE;
-        int startRow = pixelY / BFS_CELL_SIZE;
-        int endRow = (pixelY + pixelHeight) / BFS_CELL_SIZE;
+    private GridPoint findNearestWalkablePoint(GridPoint point, int searchRadius) {
+        if (isWalkable(point)) {
+            return point;
+        }
 
-        for (int row = startRow; row < endRow && row < walkable.length; row++) {
-            for (int col = startCol; col < endCol && col < walkable[0].length; col++) {
-                if (row >= 0 && col >= 0) {
-                    walkable[row][col] = false;
+        for (int radius = 1; radius <= searchRadius; radius++) {
+            for (int y = point.y() - radius; y <= point.y() + radius; y++) {
+                for (int x = point.x() - radius; x <= point.x() + radius; x++) {
+                    GridPoint nearby = new GridPoint(x, y);
+
+                    if (isWalkable(nearby)) {
+                        return nearby;
+                    }
                 }
             }
         }
+
+        return null;
     }
 
-    private void drawTemporaryBfsObstacles() {
-        Rectangle wall1 = new Rectangle(300, 120, 20, 220);
-        wall1.setFill(Color.LIGHTGRAY);
-        wall1.setStroke(Color.BLACK);
-        wall1.setUserData("bfsObstacle");
-
-        Rectangle wall2 = new Rectangle(390, 80, 20, 140);
-        wall2.setFill(Color.LIGHTGRAY);
-        wall2.setStroke(Color.BLACK);
-        wall2.setUserData("bfsObstacle");
-
-        mapPane.getChildren().addAll(wall1, wall2);
-    }
-
-    private GridPoint toGridPoint(Room room) {
-        int gridX = (int) (room.getMapX() / BFS_CELL_SIZE);
-        int gridY = (int) (room.getMapY() / BFS_CELL_SIZE);
-        return new GridPoint(gridX, gridY);
+    private boolean isWalkable(GridPoint point) {
+        return point.y() >= 0
+                && point.y() < walkableGrid.length
+                && point.x() >= 0
+                && point.x() < walkableGrid[0].length
+                && walkableGrid[point.y()][point.x()];
     }
 
     private void drawBfsPath(List<GridPoint> path) {
         Polyline polyline = new Polyline();
 
+        int imageWidth = (int) walkableImage.getWidth();
+        int imageHeight = (int) walkableImage.getHeight();
+
+        double scaleX = MAP_WIDTH / (double) imageWidth;
+        double scaleY = MAP_HEIGHT / (double) imageHeight;
+
         for (GridPoint point : path) {
-            double x = point.x() * BFS_CELL_SIZE + (BFS_CELL_SIZE / 2.0);
-            double y = point.y() * BFS_CELL_SIZE + (BFS_CELL_SIZE / 2.0);
+            double x = point.x() * scaleX;
+            double y = point.y() * scaleY;
 
             polyline.getPoints().addAll(x, y);
         }
@@ -303,4 +362,3 @@ public class GalleryController {
         mapPane.getChildren().add(polyline);
     }
 }
-

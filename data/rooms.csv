@@ -1,11 +1,11 @@
 id,name,mapX,mapY
-R34,Room 34,120,240
-R35,Room 35,180,240
-R36,Room 36,240,240
-R20,Room 20,360,180
-R21,Room 21,420,180
-R22,Room 22,480,180
-R18,Room 18,520,130
-R19,Room 19,430,130
-R32,Room 32,200,300
-R33,Room 33,140,300
+R34,Van Gogh Room,466,246
+R20,Constable Room,590,246
+R21,Botticelli Room,590,318
+R22,Turner Room,346,244
+R19,Van Eyck Room,346,174
+R18,Seurat Room,246,106
+R32,Velazquez Room,728,242
+R33,Wright of Derby Room,412,276
+R36,Da Vinci Room,178,244
+R35,Van Gogh Room 2,466,246
