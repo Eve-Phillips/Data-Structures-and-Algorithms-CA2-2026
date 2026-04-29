@@ -134,11 +134,11 @@ public class GalleryController {
         }
 
         if (route == null) {
-            outputArea.setText("No route found.");
+            outputArea.setText("No shortest route found.");
             return;
         }
 
-        outputArea.setText(route.toString());
+        outputArea.setText(formatSingleRouteOutput("Shortest Route (Dijkstra)", route));
         drawRoute(route);
     }
 
@@ -149,38 +149,17 @@ public class GalleryController {
         String start = startField.getText().trim();
         String end = endField.getText().trim();
         Set<String> avoid = parseCsvSet(avoidField.getText());
-        List<String> waypoints = parseCsvList(waypointField.getText());
 
-        int maxRoutes = 10;
-        if (maxRoutesField != null && !maxRoutesField.getText().isBlank()) {
-            try {
-                maxRoutes = Integer.parseInt(maxRoutesField.getText().trim());
-            } catch (NumberFormatException e) {
-                outputArea.setText("Max DFS routes must be a number.");
-                return;
-            }
-        }
+        int maxRoutes = parseMaxRoutes();
 
-        List<Route> routes;
-
-        if (waypoints.isEmpty()) {
-            routes = routeFinder.findAllRoutesDFS(start, end, avoid, maxRoutes);
-        } else {
-            Route route = routeFinder.findAnyValidRouteWithWaypoints(start, end, waypoints, avoid);
-            routes = route == null ? List.of() : List.of(route);
-        }
+        List<Route> routes = routeFinder.findAllRoutesDFS(start, end, avoid, maxRoutes);
 
         if (routes.isEmpty()) {
-            outputArea.setText("No routes found.");
+            outputArea.setText("No DFS routes found.");
             return;
         }
 
-        outputArea.setText(
-                routes.stream()
-                        .map(Route::toString)
-                        .collect(Collectors.joining("\n"))
-        );
-
+        outputArea.setText(formatMultipleRoutesOutput("DFS Route Permutations", routes));
         drawRoute(routes.get(0));
     }
 
@@ -209,13 +188,7 @@ public class GalleryController {
             return;
         }
 
-        outputArea.setText(
-                "Most Interesting Route:\n" +
-                        route + "\n\n" +
-                        "Artists on route: " +
-                        String.join(", ", routeFinder.getArtistsOnRoute(route))
-        );
-
+        outputArea.setText(formatSingleRouteOutput("Most Interesting Route", route));
         drawRoute(route);
     }
 
@@ -267,6 +240,32 @@ public class GalleryController {
                         "Pixel steps: " + (path.size() - 1) + "\n\n" +
                         "This route uses the black/white walkable map."
         );
+    }
+
+    @FXML
+    public void handleFindAnyValidRoute() {
+        clearRouteLines();
+
+        String start = startField.getText().trim();
+        String end = endField.getText().trim();
+        Set<String> avoid = parseCsvSet(avoidField.getText());
+        List<String> waypoints = parseCsvList(waypointField.getText());
+
+        Route route;
+
+        if (waypoints.isEmpty()) {
+            route = routeFinder.findAnyValidRoute(start, end, avoid);
+        } else {
+            route = routeFinder.findAnyValidRouteWithWaypoints(start, end, waypoints, avoid);
+        }
+
+        if (route == null) {
+            outputArea.setText("No valid route found.");
+            return;
+        }
+
+        outputArea.setText(formatSingleRouteOutput("Any Valid Route", route));
+        drawRoute(route);
     }
 
     private Set<String> parseCsvSet(String input) {
@@ -385,5 +384,68 @@ public class GalleryController {
         polyline.setUserData("routeLine");
 
         mapPane.getChildren().add(polyline);
+    }
+
+    private int parseMaxRoutes() {
+        if (maxRoutesField == null || maxRoutesField.getText().isBlank()) {
+            return 10;
+        }
+
+        try {
+            int value = Integer.parseInt(maxRoutesField.getText().trim());
+            return Math.max(1, value);
+        } catch (NumberFormatException e) {
+            return 10;
+        }
+    }
+
+    private String formatSingleRouteOutput(String title, Route route) {
+        String pathText = route.getRooms().stream()
+                .map(room -> room.getId() + " (" + room.getName() + ")")
+                .collect(Collectors.joining(" -> "));
+
+        String artistsText = routeFinder.getArtistsOnRoute(route).isEmpty()
+                ? "None"
+                : String.join(", ", routeFinder.getArtistsOnRoute(route));
+
+        String exhibitsText = route.getRooms().stream()
+                .flatMap(room -> room.getExhibits().stream())
+                .map(exhibit -> exhibit.getId() + " - " + exhibit.getTitle() + " by " + exhibit.getArtist())
+                .distinct()
+                .collect(Collectors.joining("\n"));
+
+        if (exhibitsText.isBlank()) {
+            exhibitsText = "None";
+        }
+
+        return title + "\n" +
+                "Distance: " + String.format("%.1f", route.getTotalDistance()) + "\n" +
+                "Rooms visited: " + route.getRooms().size() + "\n\n" +
+                "Path:\n" + pathText + "\n\n" +
+                "Artists on route:\n" + artistsText + "\n\n" +
+                "Exhibits encountered:\n" + exhibitsText;
+    }
+
+    private String formatMultipleRoutesOutput(String title, List<Route> routes) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(title).append("\n");
+        sb.append("Routes found: ").append(routes.size()).append("\n\n");
+
+        for (int i = 0; i < routes.size(); i++) {
+            Route route = routes.get(i);
+
+            String pathText = route.getRooms().stream()
+                    .map(Room::getId)
+                    .collect(Collectors.joining(" -> "));
+
+            sb.append(i + 1)
+                    .append(". ")
+                    .append(pathText)
+                    .append(" | distance = ")
+                    .append(String.format("%.1f", route.getTotalDistance()))
+                    .append("\n");
+        }
+
+        return sb.toString();
     }
 }

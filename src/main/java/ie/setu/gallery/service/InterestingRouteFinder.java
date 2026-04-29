@@ -115,7 +115,12 @@ public class InterestingRouteFinder {
         double totalDistance = 0.0;
 
         for (int i = 0; i < stops.size() - 1; i++) {
-            Route leg = findMostInterestingRoute(stops.get(i), stops.get(i + 1), preferredArtists, avoidRoomIds);
+            Route leg = findMostInterestingRoute(
+                    stops.get(i),
+                    stops.get(i + 1),
+                    preferredArtists,
+                    avoidRoomIds
+            );
 
             if (leg == null) {
                 return null;

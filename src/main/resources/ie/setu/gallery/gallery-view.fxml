@@ -15,36 +15,36 @@
             fx:controller="ie.setu.gallery.ui.GalleryController">
 
     <top>
-        <VBox spacing="10" style="-fx-padding: 10;">
-            <HBox spacing="8">
-                <Label text="Preferred Artists:" />
-                <TextField fx:id="artistField" promptText="Comma-separated artist names" />
-
-                <Button text="Find Interesting Route" onAction="#handleFindInterestingRoute" />
-            </HBox>
-
+        <VBox spacing="10" style="-fx-padding: 12; -fx-background-color: #f7f7f7;">
             <HBox spacing="8">
                 <Label text="Start:" />
-                <TextField fx:id="startField" promptText="Room or exhibit id" />
+                <TextField fx:id="startField" promptText="Room or exhibit id" prefWidth="160" />
 
                 <Label text="End:" />
-                <TextField fx:id="endField" promptText="Room or exhibit id" />
+                <TextField fx:id="endField" promptText="Room or exhibit id" prefWidth="160" />
+
+                <Label text="Max DFS:" />
+                <TextField fx:id="maxRoutesField" promptText="10" prefWidth="70" />
             </HBox>
 
             <HBox spacing="8">
                 <Label text="Avoid:" />
-                <TextField fx:id="avoidField" promptText="Comma-separated room or exhibit ids" />
+                <TextField fx:id="avoidField" promptText="Comma-separated room ids" prefWidth="250" />
 
                 <Label text="Waypoints:" />
-                <TextField fx:id="waypointField" promptText="Comma-separated room or exhibit ids" />
-
-                <Label text="Max DFS:" />
-                <TextField fx:id="maxRoutesField" promptText="10" prefWidth="60" />
+                <TextField fx:id="waypointField" promptText="Comma-separated room or exhibit ids" prefWidth="250" />
             </HBox>
 
             <HBox spacing="8">
-                <Button text="Find Shortest Route" onAction="#handleFindShortestRoute" />
+                <Label text="Preferred Artists:" />
+                <TextField fx:id="artistField" promptText="Comma-separated artist names" prefWidth="320" />
+            </HBox>
+
+            <HBox spacing="8">
+                <Button text="Find Any Valid Route" onAction="#handleFindAnyValidRoute" />
                 <Button text="Find DFS Routes" onAction="#handleFindDfsRoutes" />
+                <Button text="Find Shortest Route" onAction="#handleFindShortestRoute" />
+                <Button text="Find Interesting Route" onAction="#handleFindInterestingRoute" />
                 <Button text="Find BFS Map Route" onAction="#handleFindBfsMapRoute" />
             </HBox>
         </VBox>
@@ -74,9 +74,10 @@
 
     <bottom>
         <TextArea fx:id="outputArea"
-                  prefRowCount="8"
+                  prefRowCount="10"
                   wrapText="true"
-                  editable="false" />
+                  editable="false"
+                  style="-fx-font-family: 'Consolas'; -fx-font-size: 13px;" />
     </bottom>
 
 </BorderPane>
