@@ -22,6 +22,7 @@ public class GalleryApp extends Application {
         Scene scene = new Scene(loader.load(), 1100, 650);
         stage.setTitle("National Gallery Route Finder");
         stage.setScene(scene);
+        stage.setMaximized(true);
         stage.show();
     }
 
