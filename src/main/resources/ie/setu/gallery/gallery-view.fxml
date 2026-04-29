@@ -29,7 +29,7 @@
 
             <HBox spacing="8">
                 <Label text="Avoid:" />
-                <TextField fx:id="avoidField" promptText="Comma-separated room ids" prefWidth="250" />
+                <TextField fx:id="avoidField" promptText="Comma-separated room or exhibit ids" prefWidth="250" />
 
                 <Label text="Waypoints:" />
                 <TextField fx:id="waypointField" promptText="Comma-separated room or exhibit ids" prefWidth="250" />

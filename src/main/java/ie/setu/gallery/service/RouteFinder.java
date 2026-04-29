@@ -114,6 +114,36 @@ public class RouteFinder {
         visited.remove(current);
     }
 
+    public List<Route> findAllRoutesDFSWithWaypoints(String startId, String endId,
+                                                     List<String> waypointIds,
+                                                     Set<String> avoidRoomIds,
+                                                     int maxRoutes) {
+        List<String> stops = new ArrayList<>();
+        stops.add(startId);
+
+        if (waypointIds != null) {
+            stops.addAll(waypointIds);
+        }
+
+        stops.add(endId);
+
+        List<List<Route>> legRouteLists = new ArrayList<>();
+
+        for (int i = 0; i < stops.size() - 1; i++) {
+            List<Route> legRoutes = findAllRoutesDFS(stops.get(i), stops.get(i + 1), avoidRoomIds, maxRoutes);
+
+            if (legRoutes.isEmpty()) {
+                return List.of();
+            }
+
+            legRouteLists.add(legRoutes);
+        }
+
+        List<Route> results = new ArrayList<>();
+        combineWaypointLegRoutes(legRouteLists, 0, new ArrayList<>(), 0.0, results, maxRoutes);
+        return results;
+    }
+
     // DFS with waypoints
     public Route findAnyValidRouteWithWaypoints(String startId, String endId,
                                                 List<String> waypointIds, Set<String> avoidRoomIds) {
@@ -279,5 +309,45 @@ public class RouteFinder {
                 .map(exhibit -> exhibit.getArtist())
                 .distinct()
                 .collect(Collectors.toList());
+    }
+
+    private void combineWaypointLegRoutes(List<List<Route>> legRouteLists,
+                                          int legIndex,
+                                          List<Room> currentRooms,
+                                          double currentDistance,
+                                          List<Route> results,
+                                          int maxRoutes) {
+        if (results.size() >= maxRoutes) {
+            return;
+        }
+
+        if (legIndex == legRouteLists.size()) {
+            results.add(new Route(currentRooms, currentDistance));
+            return;
+        }
+
+        for (Route legRoute : legRouteLists.get(legIndex)) {
+            if (results.size() >= maxRoutes) {
+                return;
+            }
+
+            List<Room> nextRooms = new ArrayList<>(currentRooms);
+            List<Room> legRooms = new ArrayList<>(legRoute.getRooms());
+
+            if (legIndex > 0 && !legRooms.isEmpty()) {
+                legRooms = legRooms.subList(1, legRooms.size());
+            }
+
+            nextRooms.addAll(legRooms);
+
+            combineWaypointLegRoutes(
+                    legRouteLists,
+                    legIndex + 1,
+                    nextRooms,
+                    currentDistance + legRoute.getTotalDistance(),
+                    results,
+                    maxRoutes
+            );
+        }
     }
 }

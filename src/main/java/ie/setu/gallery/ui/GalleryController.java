@@ -149,10 +149,17 @@ public class GalleryController {
         String start = startField.getText().trim();
         String end = endField.getText().trim();
         Set<String> avoid = parseCsvSet(avoidField.getText());
+        List<String> waypoints = parseCsvList(waypointField.getText());
 
         int maxRoutes = parseMaxRoutes();
 
-        List<Route> routes = routeFinder.findAllRoutesDFS(start, end, avoid, maxRoutes);
+        List<Route> routes;
+
+        if (waypoints.isEmpty()) {
+            routes = routeFinder.findAllRoutesDFS(start, end, avoid, maxRoutes);
+        } else {
+            routes = routeFinder.findAllRoutesDFSWithWaypoints(start, end, waypoints, avoid, maxRoutes);
+        }
 
         if (routes.isEmpty()) {
             outputArea.setText("No DFS routes found.");

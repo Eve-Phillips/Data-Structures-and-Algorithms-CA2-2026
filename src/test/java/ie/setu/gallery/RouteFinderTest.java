@@ -105,4 +105,30 @@ public class RouteFinderTest {
         assertEquals("R34", route.getRooms().getFirst().getId());
         assertEquals("R22", route.getRooms().getLast().getId());
     }
+
+    @Test
+    void dfsRoutesWithWaypointShouldAllIncludeWaypointRoom() {
+        List<Route> routes = routeFinder.findAllRoutesDFSWithWaypoints("R34", "R22", List.of("R19"), Set.of(), 10);
+
+        assertFalse(routes.isEmpty());
+        assertTrue(routes.stream()
+                .allMatch(route -> route.getRooms().stream().anyMatch(room -> room.getId().equals("R19"))));
+    }
+
+    @Test
+    void dfsRoutesWithExhibitWaypointShouldAllIncludeThatExhibitsRoom() {
+        List<Route> routes = routeFinder.findAllRoutesDFSWithWaypoints("R34", "R22", List.of("E3"), Set.of(), 10);
+
+        assertFalse(routes.isEmpty());
+        assertTrue(routes.stream()
+                .allMatch(route -> route.getRooms().stream().anyMatch(room -> room.getId().equals("R21"))));
+    }
+
+    @Test
+    void dfsRoutesWithWaypointsShouldRespectMaxRoutes() {
+        List<Route> routes = routeFinder.findAllRoutesDFSWithWaypoints("R34", "R22", List.of("R19"), Set.of(), 2);
+
+        assertFalse(routes.isEmpty());
+        assertTrue(routes.size() <= 2);
+    }
 }
