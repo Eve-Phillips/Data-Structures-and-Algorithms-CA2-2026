@@ -16,6 +16,22 @@ public class RouteFinder {
         this.graph = graph;
     }
 
+    // Converts a set of room/exhibit ids into room ids only.
+    private Set<String> normaliseToRoomIds(Set<String> ids) {
+        if (ids == null || ids.isEmpty()) return Set.of();
+
+        Set<String> normalised = new HashSet<>();
+
+        for (String id : ids) {
+            Room room = graph.resolveRoomOrExhibit(id);
+            if (room != null) {
+                normalised.add(room.getId());
+            }
+        }
+
+        return normalised;
+    }
+
     // Finds one valid route using DFS
     // This does not guarantee the shortest path
     public Route findAnyValidRoute(String startId, String endId, Set<String> avoidRoomIds) {
@@ -26,7 +42,7 @@ public class RouteFinder {
 
         List<Room> path = new ArrayList<>();
         Set<Room> visited = new HashSet<>();
-        Set<String> avoid = avoidRoomIds == null ? Set.of() : avoidRoomIds;
+        Set<String> avoid = normaliseToRoomIds(avoidRoomIds);
 
         boolean found = dfsFindSingle(start, end, visited, path, avoid);
         if (!found) return null;
@@ -34,7 +50,6 @@ public class RouteFinder {
         return new Route(path, calculateRouteDistance(path));
     }
 
-    // Recursive DFS helper for finding a single valid route
     private boolean dfsFindSingle(Room current, Room destination, Set<Room> visited,
                                   List<Room> path, Set<String> avoid) {
         if (avoid.contains(current.getId())) return false;
@@ -56,13 +71,11 @@ public class RouteFinder {
             }
         }
 
-        // Backtrack if this branch does not reach the destination
         path.remove(path.size() - 1);
         return false;
     }
 
     // Finds multiple possible routes using DFS
-    // maxRoutes is used so the search does not explode if there are too many paths
     public List<Route> findAllRoutesDFS(String startId, String endId, Set<String> avoidRoomIds, int maxRoutes) {
         Room start = graph.resolveRoomOrExhibit(startId);
         Room end = graph.resolveRoomOrExhibit(endId);
@@ -70,8 +83,9 @@ public class RouteFinder {
         if (start == null || end == null) return List.of();
 
         List<Route> routes = new ArrayList<>();
-        dfsFindAll(start, end, new HashSet<>(), new ArrayList<>(),
-                avoidRoomIds == null ? Set.of() : avoidRoomIds, routes, maxRoutes);
+        Set<String> avoid = normaliseToRoomIds(avoidRoomIds);
+
+        dfsFindAll(start, end, new HashSet<>(), new ArrayList<>(), avoid, routes, maxRoutes);
 
         return routes;
     }
@@ -96,9 +110,43 @@ public class RouteFinder {
             }
         }
 
-        // Standard DFS backtracking step
         path.remove(path.size() - 1);
         visited.remove(current);
+    }
+
+    // DFS with waypoints
+    public Route findAnyValidRouteWithWaypoints(String startId, String endId,
+                                                List<String> waypointIds, Set<String> avoidRoomIds) {
+        List<String> stops = new ArrayList<>();
+        stops.add(startId);
+
+        if (waypointIds != null) {
+            stops.addAll(waypointIds);
+        }
+
+        stops.add(endId);
+
+        List<Room> combinedRooms = new ArrayList<>();
+        double totalDistance = 0.0;
+
+        for (int i = 0; i < stops.size() - 1; i++) {
+            Route leg = findAnyValidRoute(stops.get(i), stops.get(i + 1), avoidRoomIds);
+
+            if (leg == null) {
+                return null;
+            }
+
+            List<Room> legRooms = leg.getRooms();
+
+            if (i > 0) {
+                legRooms = legRooms.subList(1, legRooms.size());
+            }
+
+            combinedRooms.addAll(legRooms);
+            totalDistance += leg.getTotalDistance();
+        }
+
+        return new Route(combinedRooms, totalDistance);
     }
 
     // Finds the shortest route by total distance using Dijkstra's algorithm
@@ -108,7 +156,7 @@ public class RouteFinder {
 
         if (start == null || end == null) return null;
 
-        Set<String> avoid = avoidRoomIds == null ? Set.of() : avoidRoomIds;
+        Set<String> avoid = normaliseToRoomIds(avoidRoomIds);
 
         Map<Room, Double> dist = new HashMap<>();
         Map<Room, Room> prev = new HashMap<>();
@@ -126,7 +174,6 @@ public class RouteFinder {
         while (!pq.isEmpty()) {
             RoomDistance current = pq.poll();
 
-            // Ignore outdated queue entries
             if (current.distance > dist.get(current.room)) continue;
 
             if (current.room.equals(end)) break;
@@ -179,7 +226,6 @@ public class RouteFinder {
 
             List<Room> legRooms = leg.getRooms();
 
-            // Avoid duplicating the connecting room between route segments
             if (i > 0) {
                 legRooms = legRooms.subList(1, legRooms.size());
             }
@@ -191,7 +237,6 @@ public class RouteFinder {
         return new Route(combinedRooms, totalDistance);
     }
 
-    // Calculates total path length by summing distances between consecutive rooms
     public double calculateRouteDistance(List<Room> path) {
         double total = 0.0;
 
@@ -202,7 +247,6 @@ public class RouteFinder {
         return total;
     }
 
-    // Rebuilds the final path by walking backwards from end to start
     private List<Room> reconstructPath(Map<Room, Room> prev, Room start, Room end) {
         LinkedList<Room> path = new LinkedList<>();
         Room current = end;
@@ -219,7 +263,6 @@ public class RouteFinder {
         return List.of();
     }
 
-    // Small helper class for the Dijkstra priority queue
     private static class RoomDistance {
         private final Room room;
         private final double distance;
@@ -230,7 +273,6 @@ public class RouteFinder {
         }
     }
 
-    // Handy for showing which artists appear along a route
     public List<String> getArtistsOnRoute(Route route) {
         return route.getRooms().stream()
                 .flatMap(room -> room.getExhibits().stream())

@@ -15,8 +15,21 @@ public class InterestingRouteFinder {
         this.graph = graph;
     }
 
-    // Finds a route that favours rooms containing preferred artists.
-    // This still uses Dijkstra, but changes the effective edge weight.
+    private Set<String> normaliseToRoomIds(Set<String> ids) {
+        if (ids == null || ids.isEmpty()) return Set.of();
+
+        Set<String> normalised = new HashSet<>();
+
+        for (String id : ids) {
+            Room room = graph.resolveRoomOrExhibit(id);
+            if (room != null) {
+                normalised.add(room.getId());
+            }
+        }
+
+        return normalised;
+    }
+
     public Route findMostInterestingRoute(String startId, String endId,
                                           Set<String> preferredArtists,
                                           Set<String> avoidRoomIds) {
@@ -25,7 +38,7 @@ public class InterestingRouteFinder {
 
         if (start == null || end == null) return null;
 
-        Set<String> avoid = avoidRoomIds == null ? Set.of() : avoidRoomIds;
+        Set<String> avoid = normaliseToRoomIds(avoidRoomIds);
         Set<String> prefs = preferredArtists == null ? Set.of() : preferredArtists;
 
         Map<Room, Double> dist = new HashMap<>();
@@ -52,8 +65,6 @@ public class InterestingRouteFinder {
 
                 if (avoid.contains(next.getId())) continue;
 
-                // If the next room contains preferred artists,
-                // reduce the effective cost slightly so Dijkstra favours it
                 double bonus = getInterestBonus(next, prefs);
                 double adjustedWeight = Math.max(1.0, edge.getDistance() - bonus);
 
@@ -79,7 +90,6 @@ public class InterestingRouteFinder {
             current = prev.get(current);
         }
 
-        // Return the real physical distance, not the adjusted one
         double realDistance = 0.0;
         for (int i = 0; i < path.size() - 1; i++) {
             realDistance += graph.getDistanceBetween(path.get(i), path.get(i + 1));
@@ -88,8 +98,42 @@ public class InterestingRouteFinder {
         return new Route(path, realDistance);
     }
 
-    // Gives a simple score bonus based on how many preferred artists
-    // appear in the room
+    public Route findMostInterestingRouteWithWaypoints(String startId, String endId,
+                                                       List<String> waypointIds,
+                                                       Set<String> preferredArtists,
+                                                       Set<String> avoidRoomIds) {
+        List<String> stops = new ArrayList<>();
+        stops.add(startId);
+
+        if (waypointIds != null) {
+            stops.addAll(waypointIds);
+        }
+
+        stops.add(endId);
+
+        List<Room> combinedRooms = new ArrayList<>();
+        double totalDistance = 0.0;
+
+        for (int i = 0; i < stops.size() - 1; i++) {
+            Route leg = findMostInterestingRoute(stops.get(i), stops.get(i + 1), preferredArtists, avoidRoomIds);
+
+            if (leg == null) {
+                return null;
+            }
+
+            List<Room> legRooms = leg.getRooms();
+
+            if (i > 0) {
+                legRooms = legRooms.subList(1, legRooms.size());
+            }
+
+            combinedRooms.addAll(legRooms);
+            totalDistance += leg.getTotalDistance();
+        }
+
+        return new Route(combinedRooms, totalDistance);
+    }
+
     private double getInterestBonus(Room room, Set<String> preferredArtists) {
         long matches = room.getExhibits().stream()
                 .map(exhibit -> exhibit.getArtist().toLowerCase())

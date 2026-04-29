@@ -33,10 +33,13 @@
 
             <HBox spacing="8">
                 <Label text="Avoid:" />
-                <TextField fx:id="avoidField" promptText="Comma-separated room ids" />
+                <TextField fx:id="avoidField" promptText="Comma-separated room or exhibit ids" />
 
                 <Label text="Waypoints:" />
-                <TextField fx:id="waypointField" promptText="Comma-separated room ids" />
+                <TextField fx:id="waypointField" promptText="Comma-separated room or exhibit ids" />
+
+                <Label text="Max DFS:" />
+                <TextField fx:id="maxRoutesField" promptText="10" prefWidth="60" />
             </HBox>
 
             <HBox spacing="8">

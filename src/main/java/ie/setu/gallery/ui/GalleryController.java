@@ -35,6 +35,7 @@ public class GalleryController {
     @FXML private TextField avoidField;
     @FXML private TextField waypointField;
     @FXML private TextField artistField;
+    @FXML private TextField maxRoutesField;
     @FXML private TextArea outputArea;
 
     // The ImageView shows the actual gallery map.
@@ -148,8 +149,26 @@ public class GalleryController {
         String start = startField.getText().trim();
         String end = endField.getText().trim();
         Set<String> avoid = parseCsvSet(avoidField.getText());
+        List<String> waypoints = parseCsvList(waypointField.getText());
 
-        List<Route> routes = routeFinder.findAllRoutesDFS(start, end, avoid, 10);
+        int maxRoutes = 10;
+        if (maxRoutesField != null && !maxRoutesField.getText().isBlank()) {
+            try {
+                maxRoutes = Integer.parseInt(maxRoutesField.getText().trim());
+            } catch (NumberFormatException e) {
+                outputArea.setText("Max DFS routes must be a number.");
+                return;
+            }
+        }
+
+        List<Route> routes;
+
+        if (waypoints.isEmpty()) {
+            routes = routeFinder.findAllRoutesDFS(start, end, avoid, maxRoutes);
+        } else {
+            Route route = routeFinder.findAnyValidRouteWithWaypoints(start, end, waypoints, avoid);
+            routes = route == null ? List.of() : List.of(route);
+        }
 
         if (routes.isEmpty()) {
             outputArea.setText("No routes found.");
@@ -162,7 +181,6 @@ public class GalleryController {
                         .collect(Collectors.joining("\n"))
         );
 
-        // Just draws the first DFS route for now.
         drawRoute(routes.get(0));
     }
 
@@ -174,10 +192,17 @@ public class GalleryController {
         String end = endField.getText().trim();
         Set<String> avoid = parseCsvSet(avoidField.getText());
         Set<String> preferredArtists = parseCsvSet(artistField.getText());
+        List<String> waypoints = parseCsvList(waypointField.getText());
 
-        Route route = interestingRouteFinder.findMostInterestingRoute(
-                start, end, preferredArtists, avoid
-        );
+        Route route;
+
+        if (waypoints.isEmpty()) {
+            route = interestingRouteFinder.findMostInterestingRoute(start, end, preferredArtists, avoid);
+        } else {
+            route = interestingRouteFinder.findMostInterestingRouteWithWaypoints(
+                    start, end, waypoints, preferredArtists, avoid
+            );
+        }
 
         if (route == null) {
             outputArea.setText("No interesting route found.");
