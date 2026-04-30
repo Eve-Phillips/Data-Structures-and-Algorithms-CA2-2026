@@ -46,6 +46,7 @@
                 <Button text="Find Shortest Route" onAction="#handleFindShortestRoute" />
                 <Button text="Find Interesting Route" onAction="#handleFindInterestingRoute" />
                 <Button text="Find BFS Map Route" onAction="#handleFindBfsMapRoute" />
+                <Button text="Show Gallery Info" onAction="#handleShowGalleryReference" />
             </HBox>
         </VBox>
     </top>

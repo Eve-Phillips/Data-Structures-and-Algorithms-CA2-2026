@@ -19,7 +19,8 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Polyline;
-import javafx.scene.text.Text;
+//import javafx.scene.text.Text;
+import javafx.scene.control.Label;
 
 import java.io.IOException;
 import java.net.URL;
@@ -27,6 +28,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.Comparator;
 
 public class GalleryController {
 
@@ -67,7 +69,8 @@ public class GalleryController {
 
             loadMapImages();
             drawRoomMarkers();
-            //setUpMapCoordinateClick();
+            showGalleryReference();
+            setUpMapCoordinateClick();
 
         } catch (IOException e) {
             outputArea.setText("Failed to load graph data: " + e.getMessage());
@@ -102,7 +105,7 @@ public class GalleryController {
 
     // Temporary helper for calibrating room coordinates in rooms.csv.
     // Click the map, then copy the printed x/y values into the CSV.
-    /*private void setUpMapCoordinateClick() {
+    private void setUpMapCoordinateClick() {
         mapPane.setOnMouseClicked(event -> {
             long x = Math.round(event.getX());
             long y = Math.round(event.getY());
@@ -114,7 +117,39 @@ public class GalleryController {
                             "Use these values in rooms.csv as mapX,mapY."
             );
         });
-    }*/
+    }
+
+    @FXML
+    public void handleShowGalleryReference() {
+        showGalleryReference();
+    }
+
+    private void showGalleryReference() {
+        String reference = graph.getAllRooms().stream()
+                .sorted(Comparator.comparing(Room::getId))
+                .map(room -> {
+                    String exhibits = room.getExhibits().isEmpty()
+                            ? "No exhibits"
+                            : room.getExhibits().stream()
+                            .map(exhibit ->
+                                    exhibit.getId() + " - " +
+                                            exhibit.getTitle() + " by " +
+                                            exhibit.getArtist()
+                            )
+                            .collect(Collectors.joining("; "));
+
+                    return room.getId() + " - " + room.getName() + "\n" +
+                            "  " + exhibits;
+                })
+                .collect(Collectors.joining("\n\n"));
+
+        outputArea.setText(
+                "Gallery Reference\n" +
+                        "Use room IDs or exhibit IDs in Start, End, Avoid and Waypoints.\n" +
+                        "Use artist names in Preferred Artists.\n\n" +
+                        reference
+        );
+    }
 
     @FXML
     public void handleFindShortestRoute() {
@@ -300,10 +335,29 @@ public class GalleryController {
             Circle circle = new Circle(room.getMapX(), room.getMapY(), 6, Color.DARKBLUE);
             circle.setUserData("marker");
 
-            Text label = new Text(room.getMapX() + 8, room.getMapY() - 8, room.getId());
+            String exhibitIds = room.getExhibits().stream()
+                    .map(exhibit -> exhibit.getId())
+                    .collect(Collectors.joining(", "));
+
+            String labelText = exhibitIds.isBlank()
+                    ? room.getId()
+                    : room.getId() + " / " + exhibitIds;
+
+            Label label = new Label(labelText);
+            label.setLayoutX(room.getMapX() + 8);
+            label.setLayoutY(room.getMapY() - 18);
             label.setUserData("marker");
-            label.setFill(Color.BLACK);
-            label.setStyle("-fx-font-size: 12px;");
+
+            label.setStyle(
+                    "-fx-background-color: rgba(255,255,255,0.9);" +
+                            "-fx-border-color: #333333;" +
+                            "-fx-border-radius: 3;" +
+                            "-fx-background-radius: 3;" +
+                            "-fx-padding: 1 4 1 4;" +
+                            "-fx-font-size: 11px;" +
+                            "-fx-font-weight: bold;" +
+                            "-fx-text-fill: black;"
+            );
 
             mapPane.getChildren().addAll(circle, label);
         }
@@ -321,7 +375,7 @@ public class GalleryController {
             line.setStrokeWidth(3);
             line.setUserData("routeLine");
 
-            mapPane.getChildren().add(line);
+            mapPane.getChildren().add(0, line);
         }
     }
 
@@ -390,7 +444,7 @@ public class GalleryController {
         polyline.setStrokeWidth(2);
         polyline.setUserData("routeLine");
 
-        mapPane.getChildren().add(polyline);
+        mapPane.getChildren().add(0, polyline);
     }
 
     private int parseMaxRoutes() {

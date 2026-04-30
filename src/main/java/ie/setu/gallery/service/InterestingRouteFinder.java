@@ -147,7 +147,7 @@ public class InterestingRouteFinder {
                         .anyMatch(pref -> pref.equals(artist)))
                 .count();
 
-        return matches * 5.0;
+        return matches * 55.0;
     }
 
     private static class NodeCost {
