@@ -1,11 +1,11 @@
 id,name,mapX,mapY
 R34,Van Gogh Room,466,246
+R35,Van Gogh Room 2,430,246
+R36,Da Vinci Room,128,244
 R20,Constable Room,590,246
-R21,Botticelli Room,590,318
+R21,Botticelli Room,591,318
 R22,Turner Room,346,244
-R19,Van Eyck Room,346,174
-R18,Seurat Room,246,106
-R32,Velazquez Room,728,242
+R19,Van Eyck Room,347,174
+R18,Seurat Room,252,106
+R32,Velazquez Room,705,242
 R33,Wright of Derby Room,412,276
-R36,Da Vinci Room,178,244
-R35,Van Gogh Room 2,466,246

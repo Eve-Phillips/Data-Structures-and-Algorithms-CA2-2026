@@ -67,7 +67,7 @@ public class GalleryController {
 
             loadMapImages();
             drawRoomMarkers();
-            setUpMapCoordinateClick();
+            //setUpMapCoordinateClick();
 
         } catch (IOException e) {
             outputArea.setText("Failed to load graph data: " + e.getMessage());
@@ -102,7 +102,7 @@ public class GalleryController {
 
     // Temporary helper for calibrating room coordinates in rooms.csv.
     // Click the map, then copy the printed x/y values into the CSV.
-    private void setUpMapCoordinateClick() {
+    /*private void setUpMapCoordinateClick() {
         mapPane.setOnMouseClicked(event -> {
             long x = Math.round(event.getX());
             long y = Math.round(event.getY());
@@ -114,7 +114,7 @@ public class GalleryController {
                             "Use these values in rooms.csv as mapX,mapY."
             );
         });
-    }
+    }*/
 
     @FXML
     public void handleFindShortestRoute() {
