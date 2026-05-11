@@ -39,9 +39,9 @@ public class InterestingRouteFinderTest {
     }
 
     @Test
-    void interestingRouteShouldReturnNullIfRequiredExhibitRoomIsAvoided() {
+    void interestingRouteShouldReturnNullIfRequiredRoomIsAvoided() {
         Route route = interestingRouteFinder.findMostInterestingRoute(
-                "R34", "R22", Set.of("Turner", "Botticelli"), Set.of("E2")
+                "R34", "R22", Set.of("Turner", "Botticelli"), Set.of("R35")
         );
 
         assertNull(route);

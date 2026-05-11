@@ -51,8 +51,8 @@ public class RouteFinderTest {
     }
 
     @Test
-    void avoidRequiredExhibitShouldMakeRouteImpossible() {
-        Route route = routeFinder.findShortestRouteDijkstra("R34", "R22", Set.of("E2"));
+    void avoidRequiredRoomShouldMakeRouteImpossible() {
+        Route route = routeFinder.findShortestRouteDijkstra("R34", "R22", Set.of("R35"));
 
         assertNull(route);
     }
